@@ -29,9 +29,6 @@ def split_nodes_delimiter(old_nodes: list, delimiter: str, text_type: TextType)-
     new_nodes = []
 
     for node in old_nodes:
-        #print(f"Input text: '{node.text}'")
-        if node.text.count(delimiter) % 2 != 0:
-            raise ValueError("Invalid markdown: unmatched delimiters")
         if node.text_type != TextType.NORMAL:
             new_nodes.append(node)
             continue
@@ -43,11 +40,12 @@ def split_nodes_delimiter(old_nodes: list, delimiter: str, text_type: TextType)-
         r_ptr = 0
         initial_done = False
         next_seg_inside = False
+        delimiter_count = 0
 
         while l_ptr < len(node.text):
             if node.text[l_ptr:l_ptr+len(delimiter)] == delimiter:
+                delimiter_count += 1
                 if l_ptr != 0 and not initial_done:
-                    #print(f"Adding initial outsidesegment: '{node.text[0:l_ptr]}'")
                     new_nodes.append(TextNode(node.text[0:l_ptr], TextType.NORMAL))
                     initial_done = True
                     next_seg_inside = True
@@ -56,6 +54,9 @@ def split_nodes_delimiter(old_nodes: list, delimiter: str, text_type: TextType)-
 
                 while r_ptr < len(node.text) and node.text[r_ptr:r_ptr+len(delimiter)] != delimiter:
                     r_ptr += 1
+
+                if r_ptr >= len(node.text):
+                    raise ValueError("Invalid markdown: unmatched delimiters")
 
                 if not initial_done:
                     text_seg = node.text[l_ptr+len(delimiter):r_ptr]
