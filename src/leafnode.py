@@ -8,9 +8,8 @@ class LeafNode(HTMLNode):
         super().__init__(tag=tag, value=value, children=None, props=props)  # Fix the order of arguments
         #leaf nodes don't have children
     
-    def to_html(self):
-        
-        if self.value == None:
+    def to_html(self) -> str:
+        if self.value is None:
             raise ValueError("Leaf node value is required")
         
         if self.tag == None and self.props != None:
@@ -22,9 +21,12 @@ class LeafNode(HTMLNode):
        # print(f"Debug - props is None?: {self.props is None}")
         #print(f"Debug - props type: {type(self.props)}")
     
-        if self.props == None:  # This condition might be the problem
+        if self.props == None:
+            if self.tag == "img":
+                return f"<{self.tag}>"
             return f"<{self.tag}>{self.value}</{self.tag}>"
     
         props_str = self.props_to_html()
-        #print(f"Debug - props_str: {props_str}")
+        if self.tag == "img":
+            return f"<{self.tag}{props_str}>"
         return f"<{self.tag}{props_str}>{self.value}</{self.tag}>"

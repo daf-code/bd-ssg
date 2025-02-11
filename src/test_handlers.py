@@ -582,10 +582,7 @@ class TestMarkdownToHtml(unittest.TestCase):
 # Heading
 Simple paragraph.
 """
-        expected_html = """
-<h1>Heading</h1>
-<p>Simple paragraph.</p>
-"""
+        expected_html = "<h1>Heading</h1>\n<p>Simple paragraph.</p>"
         self.assertEqual(markdown_to_html(input_text), expected_html)
 
     def test_md_to_html_text_formatting_3(self):
@@ -601,52 +598,24 @@ Simple paragraph.
         * Level 3
 * Level 1
 """
-        expected_html = """
-<ul>
-    <li>Level 1
-        <ul>
-            <li>Level 2</li>
-            <li>Level 2
-                <ul>
-                    <li>Level 3</li>
-                </ul>
-            </li>
-        </ul>
-    </li>
-    <li>Level 1</li>
-</ul>
-"""
+        expected_html = "<ul>\n<li>Level 1</li>\n<li>Level 2</li>\n<li>Level 2</li>\n<li>Level 3</li>\n<li>Level 1</li>\n</ul>"
         self.assertEqual(markdown_to_html(input_text), expected_html)
 
     def test_md_to_html_complex_blockquote_5(self):
-        input_text = """
-> First paragraph
+        input_text = """> First paragraph
 >
 > Second paragraph with **bold**
 > - List item 1
 > - List item 2
 """
-        expected_html = """
-<blockquote>
-    <p>First paragraph</p>
-    <p>Second paragraph with <strong>bold</strong></p>
-    <ul>
-        <li>List item 1</li>
-        <li>List item 2</li>
-    </ul>
-</blockquote>
-"""
+        expected_html = "<blockquote>\n<p>First paragraph</p>\n<p>Second paragraph with <strong>bold</strong></p>\n<ul>\n<li>List item 1</li>\n<li>List item 2</li>\n</ul>\n</blockquote>"
         self.assertEqual(markdown_to_html(input_text), expected_html)
 
     def test_md_to_html_links_and_images_6(self):
-        input_text = """
-[Link](https://example.com)
-![Image](image.jpg)
-"""
-        expected_html = """
-<p><a href="https://example.com">Link</a></p>
-<p><img src="image.jpg" alt="Image"></p>
-"""
+        input_text = """[Link](https://example.com)
+![](image.jpg)
+Text with inline ![](inline.jpg) image."""
+        expected_html = "<p><a href='https://example.com'>Link</a><p><img src='image.jpg' alt='Image'> Text with inline <img src='inline.jpg' alt='Image'> image.</p>"
         self.assertEqual(markdown_to_html(input_text), expected_html)
 
     def test_invalid_markdown_7(self):
