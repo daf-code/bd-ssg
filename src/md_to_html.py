@@ -2,49 +2,117 @@ from htmlnode import HTMLNode
 from parentnode import ParentNode
 from leafnode import LeafNode
 from textnode import TextNode, TextType
-from ssg_handlers import markdown_to_blocks, detect_block_type
+from ssg_handlers import markdown_to_blocks, detect_block_type, text_to_textnodes, textnode_to_htmlnode
 
 def markdown_to_html_node(markdown: str) -> HTMLNode:
-    # Create root div node that will contain all blocks
+    # Create root div node that will contain all blocks of the markdown document
     root = ParentNode("div")
     
-    # Split markdown into blocks
+    # Split markdown string into blocks based on blank lines and block-level syntax
     blocks = markdown_to_blocks(markdown)
     
+    # Initialize list to store HTML nodes for each block
     block_nodes = []
     for block in blocks:
+        # Determine the type of block (header, paragraph, list, etc)
         block_type = detect_block_type(block)
         match block_type:
             case "hblock":
-                # Get header level from number of #s
+                # Count leading #s to determine header level (h1-h6)
                 level = len(block) - len(block.lstrip("#"))
+                # Remove #s and whitespace to get header text
                 text = block.lstrip("#").strip()
-                # Convert text to nodes
-                # Create h1-h6 node with children
+                # Parse text for inline elements (bold, italic, etc)
+                text_nodes = text_to_textnodes(text)
+                # Convert each text node to its HTML representation
+                html_nodes = [textnode_to_htmlnode(node) for node in text_nodes]
+                # Create header node (h1-h6) containing the processed inline elements
+                header = ParentNode(f"h{level}", html_nodes)
+                # Add the complete header node to our list of blocks
+                block_nodes.append(header)
                 
             case "pblock":
-                # Convert text to nodes
-                # Create p node with children
+                # Parse block text for inline elements (bold, italic, links, etc)
+                text_nodes = text_to_textnodes(block)
+                # Convert each text node to its HTML representation
+                html_nodes = [textnode_to_htmlnode(node) for node in text_nodes]
+                # Create paragraph node containing the processed inline elements
+                paragraph = ParentNode("p", html_nodes)
+                # Add the complete paragraph node to our list of blocks
+                block_nodes.append(paragraph)
                 
             case "ulblock":
-                # Split into list items
-                # Convert each item's text to nodes
-                # Create ul node with li children
+                # Split block into individual list items by newline
+                items = block.split("\n")
+                # Initialize list to store processed list item nodes
+                list_items = []
+                for item in items:
+                    # Remove leading * or - and whitespace
+                    item_text = item.lstrip("* -").strip()
+                    # Parse item text for inline elements
+                    text_nodes = text_to_textnodes(item_text)
+                    # Convert text nodes to HTML nodes
+                    html_nodes = [textnode_to_htmlnode(node) for node in text_nodes]
+                    # Create li node containing the processed inline elements
+                    li_node = ParentNode("li", html_nodes)
+                    # Add to list of items
+                    list_items.append(li_node)
+                # Create ul node containing all list items
+                ul_node = ParentNode("ul", list_items)
+                # Add the complete unordered list to our blocks
+                block_nodes.append(ul_node)
                 
             case "olblock":
-                # Split into list items
-                # Convert each item's text to nodes
-                # Create ol node with li children
+                # Split block into individual list items by newline
+                items = block.split("\n")
+                # Initialize list to store processed list item nodes
+                list_items = []
+                for item in items:
+                    # Split on period and take everything after it, remove whitespace
+                    item_text = item.split(". ", 1)[1].strip()
+                    # Parse item text for inline elements
+                    text_nodes = text_to_textnodes(item_text)
+                    # Convert text nodes to HTML nodes
+                    html_nodes = [textnode_to_htmlnode(node) for node in text_nodes]
+                    # Create li node containing the processed inline elements
+                    li_node = ParentNode("li", html_nodes)
+                    # Add to list of items
+                    list_items.append(li_node)
+                # Create ol node containing all list items
+                ol_node = ParentNode("ol", list_items)
+                # Add the complete ordered list to our blocks
+                block_nodes.append(ol_node)
                 
             case "codeblock":
-                # Extract code content
-                # Create pre/code node structure
+                # Remove leading and trailing ``` markers
+                code_content = block.strip("`").strip()
+                # Create leaf node for code content (no parsing of inline elements)
+                code_node = LeafNode("code", code_content)
+                # Wrap code node in pre node for proper HTML formatting
+                pre_node = ParentNode("pre", [code_node])
+                # Add the complete code block to our blocks
+                block_nodes.append(pre_node)
                 
             case "qblock":
-                # Convert text to nodes
-                # Create blockquote node with children
-                
-        # Add the created node to block_nodes
+                # Split block into lines and process each line
+                lines = block.split("\n")
+                quote_lines = []
+                for line in lines:
+                    # Remove leading > and whitespace
+                    line_text = line.lstrip(">").strip()
+                    # Parse line for inline elements
+                    text_nodes = text_to_textnodes(line_text)
+                    # Convert text nodes to HTML nodes
+                    html_nodes = [textnode_to_htmlnode(node) for node in text_nodes]
+                    # Create paragraph node for this line
+                    p_node = ParentNode("p", html_nodes)
+                    quote_lines.append(p_node)
+                # Create blockquote node containing all processed lines
+                quote_node = ParentNode("blockquote", quote_lines)
+                # Add the complete blockquote to our blocks
+                block_nodes.append(quote_node)
     
+    # Set all processed blocks as children of the root div
     root.children = block_nodes
+    # Return the complete HTML node tree
     return root
