@@ -96,19 +96,37 @@ def markdown_to_html_node(markdown: str) -> HTMLNode:
             case "qblock":
                 # Split block into lines and process each line
                 lines = block.split("\n")
-                quote_lines = []
+                # Remove leading and trailing empty lines while preserving internal ones
+                lines = [line.lstrip(">").strip() for line in lines]
+                while lines and not lines[0]:  # Remove leading empty lines
+                    lines.pop(0)
+                while lines and not lines[-1]:  # Remove trailing empty lines
+                    lines.pop()
+                
+                # Group lines into paragraphs
+                paragraphs = []
+                current_para = []
                 for line in lines:
-                    # Remove leading > and whitespace
-                    line_text = line.lstrip(">").strip()
-                    # Parse line for inline elements
-                    text_nodes = text_to_textnodes(line_text)
-                    # Convert text nodes to HTML nodes
+                    if line:
+                        current_para.append(line)
+                    elif current_para:  # Empty line and we have content
+                        paragraphs.append(" ".join(current_para))
+                        current_para = []
+                if current_para:  # Don't forget last paragraph
+                    paragraphs.append(" ".join(current_para))
+                
+                quote_nodes = []
+                for para in paragraphs:
+                    text_nodes = text_to_textnodes(para)
                     html_nodes = [textnode_to_htmlnode(node) for node in text_nodes]
-                    # Create paragraph node for this line
-                    p_node = ParentNode("p", html_nodes)
-                    quote_lines.append(p_node)
-                # Create blockquote node containing all processed lines
-                quote_node = ParentNode("blockquote", quote_lines)
+                    if len(paragraphs) > 1:  # Only wrap in <p> if multiple paragraphs
+                        p_node = ParentNode("p", html_nodes)
+                        quote_nodes.append(p_node)
+                    else:
+                        quote_nodes.extend(html_nodes)  # Single paragraph, no <p> wrapper
+                
+                # Create blockquote node containing all processed nodes
+                quote_node = ParentNode("blockquote", quote_nodes)
                 # Add the complete blockquote to our blocks
                 block_nodes.append(quote_node)
     
