@@ -183,31 +183,32 @@ def markdown_to_blocks(markdown: str) -> list[str]:
     
     for line in markdown.split("\n"):
         line = line.strip()
+        
         if line.startswith("#"):
             if current_block:
-                # Check if it's a list block (starts with * or -)
-                if any(block.startswith(("* ", "- ")) for block in current_block):
-                    blocks.append("\n".join(current_block))
-                else:
-                    blocks.append(" ".join(current_block))
+                blocks.append("\n".join(current_block))
                 current_block = []
             blocks.append(line)
-        elif line:
-            current_block.append(line)
-        elif current_block:
-            # Same check when ending a block
-            if any(block.startswith(("* ", "- ")) for block in current_block):
+        
+        if line.startswith(">") or (current_block and current_block[0].startswith(">")):
+            if not line:  # Empty line in blockquote
+                current_block.append(">")
+            if line:  # Ensure > is preserved for blockquote content
+                current_block.append(line if line.startswith(">") else f">{line}")
+        
+        if not line.startswith(">") and not line.startswith("#"):
+            if current_block and current_block[0].startswith(">"):
                 blocks.append("\n".join(current_block))
-            else:
-                blocks.append(" ".join(current_block))
+                current_block = []
+            if line:
+                current_block.append(line)
+        
+        if not line and current_block and not current_block[0].startswith(">"):
+            blocks.append("\n".join(current_block))
             current_block = []
     
     if current_block:
-        # And here for the last block
-        if any(block.startswith(("* ", "- ")) for block in current_block):
-            blocks.append("\n".join(current_block))
-        else:
-            blocks.append(" ".join(current_block))
+        blocks.append("\n".join(current_block))
     
     return blocks
 
