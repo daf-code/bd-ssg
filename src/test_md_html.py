@@ -29,14 +29,13 @@ class TestMarkdownToHtmlNode(unittest.TestCase):
 
     def test_markdown_to_html_node_unordered_list_4(self):
         """Test unordered list conversion"""
-        markdown = """* Item 1
-* Item 2
-* Item 3"""
+        markdown = "* Item 1"
         node = markdown_to_html_node(markdown)
         self.assertEqual(len(node.children), 1)
-        self.assertEqual(node.children[0].tag, "ul")
-        expected_html = "<ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>"
-        self.assertEqual(node.children[0].to_html(), expected_html)
+        ul_node = node.children[0]
+        self.assertEqual(ul_node.tag, "ul")
+        self.assertEqual(len(ul_node.children), 1)
+        self.assertEqual(ul_node.children[0].to_html(), "<li>Item 1</li>")
 
     def test_markdown_to_html_node_code_block_5(self):
         """Test code block conversion"""
@@ -50,15 +49,29 @@ class TestMarkdownToHtmlNode(unittest.TestCase):
         )
 
     def test_markdown_to_html_node_mixed_content_6(self):
-        """Test mixed content conversion"""
+        """Test mixed content with basic blocks"""
         markdown = """# Header
 
 This is a paragraph.
 
-* List item 1
-* List item 2"""
+* Item 1"""
         
         node = markdown_to_html_node(markdown)
-        html = node.to_html()
-        expected = "<div><h1>Header</h1><p>This is a paragraph.</p><ul><li>List item 1</li><li>List item 2</li></ul></div>"
-        self.assertEqual(html, expected)
+        self.assertEqual(len(node.children), 3)
+        self.assertEqual(node.children[0].to_html(), "<h1>Header</h1>")
+        self.assertEqual(node.children[1].to_html(), "<p>This is a paragraph.</p>")
+        self.assertEqual(node.children[2].to_html(), "<ul><li>Item 1</li></ul>")
+
+    def test_markdown_to_html_node_multiline_list_7(self):
+        """Test list conversion with proper line handling"""
+        markdown = """* Item 1
+* Item 2
+* Item 3"""
+        node = markdown_to_html_node(markdown)
+        self.assertEqual(len(node.children), 1)
+        ul_node = node.children[0]
+        self.assertEqual(ul_node.tag, "ul")
+        self.assertEqual(
+            ul_node.to_html(),
+            "<ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>"
+        )

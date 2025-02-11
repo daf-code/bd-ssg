@@ -185,17 +185,29 @@ def markdown_to_blocks(markdown: str) -> list[str]:
         line = line.strip()
         if line.startswith("#"):
             if current_block:
-                blocks.append(" ".join(current_block))  # Join with space instead of newline
+                # Check if it's a list block (starts with * or -)
+                if any(block.startswith(("* ", "- ")) for block in current_block):
+                    blocks.append("\n".join(current_block))
+                else:
+                    blocks.append(" ".join(current_block))
                 current_block = []
             blocks.append(line)
         elif line:
             current_block.append(line)
         elif current_block:
-            blocks.append(" ".join(current_block))  # Join with space instead of newline
+            # Same check when ending a block
+            if any(block.startswith(("* ", "- ")) for block in current_block):
+                blocks.append("\n".join(current_block))
+            else:
+                blocks.append(" ".join(current_block))
             current_block = []
     
     if current_block:
-        blocks.append(" ".join(current_block))  # Join with space instead of newline
+        # And here for the last block
+        if any(block.startswith(("* ", "- ")) for block in current_block):
+            blocks.append("\n".join(current_block))
+        else:
+            blocks.append(" ".join(current_block))
     
     return blocks
 
@@ -297,36 +309,47 @@ def process_blockquote(block: str) -> str:
     in_list = False
     
     for line in block.split("\n"):
+        # Remove leading > and whitespace, but keep track if it started with >
+        was_quote = line.startswith(">")
         line = line.lstrip(">").strip()
+        
+        # Handle list items
         if line.startswith(("* ", "- ")):
+            # If we were building a paragraph, finish it
             if current_para:
-                nodes = text_to_textnodes("\n".join(current_para))
-                inner_html = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-                paragraphs.append(f"<p>{inner_html}</p>")
+                nodes = text_to_textnodes(" ".join(current_para))
+                content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
+                paragraphs.append(f"<p>{content}</p>")
                 current_para = []
+            
+            # Add to list items
             item_text = line.lstrip("* -").strip()
             nodes = text_to_textnodes(item_text)
-            inner_html = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-            list_items.append(f"<li>{inner_html}</li>")
+            content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
+            list_items.append(f"<li>{content}</li>")
             in_list = True
-        else:
-            if in_list:
-                paragraphs.append("<ul>\n" + "\n".join(list_items) + "\n</ul>")
-                list_items = []
-                in_list = False
-            if line:
-                current_para.append(line)
-            elif current_para:
-                nodes = text_to_textnodes("\n".join(current_para))
-                inner_html = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-                paragraphs.append(f"<p>{inner_html}</p>")
-                current_para = []
+        
+        # If we were in a list, finish it
+        if in_list and not line.startswith(("* ", "- ")):
+            paragraphs.append("<ul>\n" + "\n".join(list_items) + "\n</ul>")
+            list_items = []
+            in_list = False
+        
+        # Handle regular lines
+        if was_quote and line:  # Only add non-empty quoted lines
+            current_para.append(line)
+        if current_para and not was_quote:  # Empty line or non-quote line ends paragraph
+            nodes = text_to_textnodes(" ".join(current_para))
+            content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
+            paragraphs.append(f"<p>{content}</p>")
+            current_para = []
     
+    # Handle any remaining content
     if in_list:
         paragraphs.append("<ul>\n" + "\n".join(list_items) + "\n</ul>")
-    elif current_para:
-        nodes = text_to_textnodes("\n".join(current_para))
-        inner_html = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-        paragraphs.append(f"<p>{inner_html}</p>")
+    if current_para:
+        nodes = text_to_textnodes(" ".join(current_para))
+        content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
+        paragraphs.append(f"<p>{content}</p>")
     
     return "<blockquote>\n" + "\n".join(paragraphs) + "\n</blockquote>"
