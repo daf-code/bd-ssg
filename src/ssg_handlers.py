@@ -189,21 +189,32 @@ def markdown_to_blocks(markdown: str) -> list[str]:
                 blocks.append("\n".join(current_block))
                 current_block = []
             blocks.append(line)
+            continue
         
         if line.startswith(">") or (current_block and current_block[0].startswith(">")):
             if not line:  # Empty line in blockquote
-                current_block.append(">")
-            if line:  # Ensure > is preserved for blockquote content
-                current_block.append(line if line.startswith(">") else f">{line}")
+                if current_block:
+                    blocks.append("\n".join(current_block))
+                    current_block = []
+            else:  # Ensure > is preserved for blockquote content
+                current_block.append(line)
+            continue
         
-        if not line.startswith(">") and not line.startswith("#"):
-            if current_block and current_block[0].startswith(">"):
+        if line.startswith(("* ", "- ")):
+            if current_block and not current_block[0].startswith(("* ", "- ")):
                 blocks.append("\n".join(current_block))
                 current_block = []
-            if line:
-                current_block.append(line)
-        
-        if not line and current_block and not current_block[0].startswith(">"):
+            current_block.append(line)
+            continue
+            
+        if line:
+            if current_block and (
+                current_block[0].startswith(("* ", "- ")) or 
+                current_block[0].startswith(">")):
+                blocks.append("\n".join(current_block))
+                current_block = []
+            current_block.append(line)
+        elif current_block:
             blocks.append("\n".join(current_block))
             current_block = []
     
@@ -280,10 +291,13 @@ def process_nested_list(items: list[str]) -> str:
     result = ["<ul>"]
     
     for item in items:
-        content = item.lstrip("* -").strip()
-        nodes = text_to_textnodes(content)
-        inner_html = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-        result.append(f"<li>{inner_html}</li>")
+        # Split by newlines in case items were joined
+        for subitem in item.split("\n"):
+            if subitem.strip():  # Skip empty lines
+                content = subitem.lstrip("* -").strip()
+                nodes = text_to_textnodes(content)
+                inner_html = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
+                result.append(f"<li>{inner_html}</li>")
     
     result.append("</ul>")
     return "\n".join(result)
@@ -307,12 +321,12 @@ def process_blockquote(block: str) -> str:
     # Process each paragraph
     html_blocks = []
     for para in raw_paragraphs:
-        if para.startswith(("* ", "- ")):  # List paragraph
-            items = para.split("\n")
+        # Check if this paragraph is a list
+        if any(line.strip().startswith(("- ", "* ")) for line in para.split("\n")):
+            items = [line.strip().lstrip("- *").strip() for line in para.split("\n")]
             list_items = []
             for item in items:
-                item_text = item.lstrip("* -").strip()
-                nodes = text_to_textnodes(item_text)
+                nodes = text_to_textnodes(item)
                 content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
                 list_items.append(f"<li>{content}</li>")
             html_blocks.append("<ul>\n" + "\n".join(list_items) + "\n</ul>")
