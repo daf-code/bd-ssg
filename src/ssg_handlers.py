@@ -232,9 +232,7 @@ def detect_block_type(block: str) -> str:
             else: return "pblock"
         return "olblock"
     if block.startswith(">"):
-        for blockline in block.split("\n"):
-            if not blockline.startswith(">"):
-                return "pblock"
+        # Consider it a blockquote if the first line starts with >
         return "qblock"
     return "pblock"
 
@@ -253,8 +251,8 @@ def markdown_to_html(markdown: str) -> str:
                 level = len(block) - len(block.lstrip("#"))
                 text = block.lstrip("#").strip()
                 nodes = text_to_textnodes(text)
-                inner_html = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-                html_blocks.append(f"<h{level}>{inner_html}</h{level}>")
+                content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
+                html_blocks.append(f"<h{level}>{content}</h{level}>")
             case "codeblock":
                 html_blocks.append(f"<pre><code>{block.strip('```')}</code></pre>")
             case "ulblock":
@@ -265,28 +263,15 @@ def markdown_to_html(markdown: str) -> str:
                 for item in block.split("\n"):
                     item_text = item.split(". ", 1)[1].strip()
                     nodes = text_to_textnodes(item_text)
-                    inner_html = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-                    ol_items.append(f"<li>{inner_html}</li>")
+                    content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
+                    ol_items.append(f"<li>{content}</li>")
                 html_blocks.append("<ol>" + "".join(ol_items) + "</ol>")
             case "qblock":
                 html_blocks.append(process_blockquote(block))
             case "pblock":
-                # Check if the block is just an image
-                if block.strip().startswith("![") and block.strip().endswith(")"):
-                    nodes = text_to_textnodes(block)
-                    inner_html = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-                    html_blocks.append(f"<p>{inner_html}</p>")
-                else:
-                    nodes = text_to_textnodes(block)
-                    inner_html = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-                    html_blocks.append(f"<p>{inner_html}</p>")
-            case _:
                 nodes = text_to_textnodes(block)
-                inner_html = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-                html_blocks.append(f"<p>{inner_html}</p>")
-    
-    #if len(html_blocks) == 1 and html_blocks[0].startswith("<p>"):
-    #    return html_blocks[0] + "</p>"
+                content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
+                html_blocks.append(f"<p>{content}</p>")
     
     return "\n".join(html_blocks)
 
@@ -303,53 +288,36 @@ def process_nested_list(items: list[str]) -> str:
     return "\n".join(result)
 
 def process_blockquote(block: str) -> str:
-    paragraphs = []
-    current_para = []
-    list_items = []
-    in_list = False
+    # First, split into paragraphs by empty lines
+    raw_paragraphs = []
+    current = []
     
     for line in block.split("\n"):
-        # Remove leading > and whitespace, but keep track if it started with >
-        was_quote = line.startswith(">")
-        line = line.lstrip(">").strip()
-        
-        # Handle list items
-        if line.startswith(("* ", "- ")):
-            # If we were building a paragraph, finish it
-            if current_para:
-                nodes = text_to_textnodes(" ".join(current_para))
-                content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-                paragraphs.append(f"<p>{content}</p>")
-                current_para = []
-            
-            # Add to list items
-            item_text = line.lstrip("* -").strip()
-            nodes = text_to_textnodes(item_text)
-            content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-            list_items.append(f"<li>{content}</li>")
-            in_list = True
-        
-        # If we were in a list, finish it
-        if in_list and not line.startswith(("* ", "- ")):
-            paragraphs.append("<ul>\n" + "\n".join(list_items) + "\n</ul>")
+        line = line.lstrip(">").strip()  # Remove > and whitespace
+        if line:  # If line has content
+            current.append(line)
+        elif current:  # If empty line and we have content
+            raw_paragraphs.append("\n".join(current))
+            current = []
+
+    if current:
+        raw_paragraphs.append("\n".join(current))
+    
+    # Process each paragraph
+    html_blocks = []
+    for para in raw_paragraphs:
+        if para.startswith(("* ", "- ")):  # List paragraph
+            items = para.split("\n")
             list_items = []
-            in_list = False
-        
-        # Handle regular lines
-        if was_quote and line:  # Only add non-empty quoted lines
-            current_para.append(line)
-        if current_para and not was_quote:  # Empty line or non-quote line ends paragraph
-            nodes = text_to_textnodes(" ".join(current_para))
+            for item in items:
+                item_text = item.lstrip("* -").strip()
+                nodes = text_to_textnodes(item_text)
+                content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
+                list_items.append(f"<li>{content}</li>")
+            html_blocks.append("<ul>\n" + "\n".join(list_items) + "\n</ul>")
+        else:  # Regular paragraph
+            nodes = text_to_textnodes(para)
             content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-            paragraphs.append(f"<p>{content}</p>")
-            current_para = []
+            html_blocks.append(f"<p>{content}</p>")
     
-    # Handle any remaining content
-    if in_list:
-        paragraphs.append("<ul>\n" + "\n".join(list_items) + "\n</ul>")
-    if current_para:
-        nodes = text_to_textnodes(" ".join(current_para))
-        content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
-        paragraphs.append(f"<p>{content}</p>")
-    
-    return "<blockquote>\n" + "\n".join(paragraphs) + "\n</blockquote>"
+    return "<blockquote>\n" + "\n".join(html_blocks) + "\n</blockquote>"
