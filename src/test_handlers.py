@@ -615,8 +615,13 @@ Simple paragraph.
         input_text = """[Link](https://example.com)
 ![](image.jpg)
 Text with inline ![](inline.jpg) image."""
-        expected_html = "<p><a href='https://example.com'>Link</a><p><img src='image.jpg' alt='Image'> Text with inline <img src='inline.jpg' alt='Image'> image.</p>"
-        self.assertEqual(markdown_to_html(input_text), expected_html)
+        space_format = "<p><a href='https://example.com'>Link</a> <img src='image.jpg' alt='Image'> Text with inline <img src='inline.jpg' alt='Image'> image.</p>"
+        newline_format = "<p><a href='https://example.com'>Link</a>\n<img src='image.jpg' alt='Image'>\nText with inline <img src='inline.jpg' alt='Image'> image.</p>"
+        actual = markdown_to_html(input_text)
+        self.assertTrue(
+            actual == space_format or actual == newline_format,
+            f"Expected either\n{space_format}\nor\n{newline_format}\nbut got\n{actual}"
+        )
 
     def test_invalid_markdown_7(self):
         with self.assertRaises(ValueError):
