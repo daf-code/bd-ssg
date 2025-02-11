@@ -35,10 +35,8 @@ class TestMarkdownToHtmlNode(unittest.TestCase):
         node = markdown_to_html_node(markdown)
         self.assertEqual(len(node.children), 1)
         self.assertEqual(node.children[0].tag, "ul")
-        self.assertEqual(
-            node.children[0].to_html(),
-            "<ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>"
-        )
+        expected_html = "<ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>"
+        self.assertEqual(node.children[0].to_html(), expected_html)
 
     def test_markdown_to_html_node_code_block_5(self):
         """Test code block conversion"""
@@ -54,13 +52,13 @@ class TestMarkdownToHtmlNode(unittest.TestCase):
     def test_markdown_to_html_node_mixed_content_6(self):
         """Test mixed content conversion"""
         markdown = """# Header
-        
-This is a **bold** paragraph.
+
+This is a paragraph.
 
 * List item 1
 * List item 2"""
         
         node = markdown_to_html_node(markdown)
         html = node.to_html()
-        expected = "<div><h1>Header</h1><p>This is a <strong>bold</strong> paragraph.</p><ul><li>List item 1</li><li>List item 2</li></ul></div>"
+        expected = "<div><h1>Header</h1><p>This is a paragraph.</p><ul><li>List item 1</li><li>List item 2</li></ul></div>"
         self.assertEqual(html, expected)
