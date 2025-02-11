@@ -19,12 +19,12 @@ class LeafNode(HTMLNode):
         if self.tag == None:
             return f"{self.value}"
   # The issue might be here - we're checking if props is None, but what if it's an empty dict?
-        print(f"Debug - props is None?: {self.props is None}")
-        print(f"Debug - props type: {type(self.props)}")
+       # print(f"Debug - props is None?: {self.props is None}")
+        #print(f"Debug - props type: {type(self.props)}")
     
         if self.props == None:  # This condition might be the problem
             return f"<{self.tag}>{self.value}</{self.tag}>"
     
         props_str = self.props_to_html()
-        print(f"Debug - props_str: {props_str}")
+        #print(f"Debug - props_str: {props_str}")
         return f"<{self.tag}{props_str}>{self.value}</{self.tag}>"
