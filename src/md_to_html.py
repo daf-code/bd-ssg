@@ -22,13 +22,11 @@ def markdown_to_html_node(markdown: str) -> HTMLNode:
                 level = len(block) - len(block.lstrip("#"))
                 # Remove #s and whitespace to get header text
                 text = block.lstrip("#").strip()
-                # Parse text for inline elements (bold, italic, etc)
+                # Process the content for inline formatting
                 text_nodes = text_to_textnodes(text)
-                # Convert each text node to its HTML representation
                 html_nodes = [textnode_to_htmlnode(node) for node in text_nodes]
-                # Create header node (h1-h6) containing the processed inline elements
+                # Create header node with processed content
                 header = ParentNode(f"h{level}", html_nodes)
-                # Add the complete header node to our list of blocks
                 block_nodes.append(header)
                 
             case "pblock":
