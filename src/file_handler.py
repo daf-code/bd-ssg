@@ -8,17 +8,14 @@ def copy_static():
     static_dir = os.path.join(directory, 'static')
     public_dir = os.path.join(directory, 'public')
     temp_zip = 'temp.zip'  # Just the filename, since we're changing directory
+    original_dir = os.getcwd()  # Store original directory at the start
     
     try:
         # Check if static directory exists
         if not os.path.exists(static_dir):
             raise Exception(f"Static directory not found: {static_dir}")
         
-        #recreate public directory
-        os.makedirs(public_dir)
-        
         # Change to static directory for zip operation
-        original_dir = os.getcwd()
         os.chdir(static_dir)
         
         # Zip from within static directory
@@ -27,7 +24,6 @@ def copy_static():
         # Change to project root for unzip
         os.chdir(directory)
         subprocess.run(['unzip', '-o', temp_zip, '-d', 'public'], check=True)
-        
         
         # Replace the ls commands with find
         static_files = set(subprocess.check_output(
@@ -46,9 +42,8 @@ def copy_static():
             print("Verification successful: All files copied to public")
             
     finally:
-        # Change back to original directory and cleanup
-        os.chdir(directory)  # Ensure we're in the right directory for cleanup
-        if os.path.exists(temp_zip):
-            os.remove(temp_zip)
-        if original_dir:  # Make sure we go back to where we started
-            os.chdir(original_dir)
+        # Always try to return to original directory
+        os.chdir(original_dir)
+        # Clean up temp zip file if it exists
+        if os.path.exists(os.path.join(directory, temp_zip)):
+            os.remove(os.path.join(directory, temp_zip))

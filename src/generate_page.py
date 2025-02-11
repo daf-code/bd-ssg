@@ -41,4 +41,23 @@ def generate_page(from_path, template_path, dest_path):
         file.write(template)
         
     print(f"Generated HTML page saved to {dest_path}")
+
+def generate_pages_recursively(content_dir, template_path, public_dir):
+    """
+    Recursively generate HTML pages from markdown files while maintaining directory structure
+    """
+    # Create the public directory if it doesn't exist
+    os.makedirs(public_dir, exist_ok=True)
     
+    for item in os.listdir(content_dir):
+        content_path = os.path.join(content_dir, item)
+        public_path = os.path.join(public_dir, item)
+        
+        if os.path.isfile(content_path):
+            if item.endswith('.md'):
+                # Convert .md files to .html
+                html_path = public_path.replace('.md', '.html')
+                generate_page(content_path, template_path, html_path)
+        elif os.path.isdir(content_path):
+            # Create corresponding directory in public and recurse
+            generate_pages_recursively(content_path, template_path, public_path)

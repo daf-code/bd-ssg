@@ -12,16 +12,14 @@ def main():
     # Remove the public directory if it exists
     if os.path.exists(public_dir):
         shutil.rmtree(public_dir, ignore_errors=True)
+    # Create the public directory
+    os.makedirs(public_dir) 
    
     # Copy the static files to the public directory
     file_handler.copy_static()
 
     # Generate the index page
-    generate_page.generate_page(
-        os.path.join(directory, 'content', 'index.md'),
-        os.path.join(directory, 'template.html'),
-        os.path.join(directory, 'public', 'index.html')
-    )
+    generate_page.generate_pages_recursively(os.path.join(directory, 'content'), os.path.join(directory, 'template.html'), public_dir)
 
 if __name__ == "__main__":
     main()
