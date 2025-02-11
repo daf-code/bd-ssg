@@ -44,52 +44,43 @@ def split_nodes_delimiter(old_nodes: list, delimiter: str, text_type: TextType)-
 
         while l_ptr < len(node.text):
             if node.text[l_ptr:l_ptr+len(delimiter)] == delimiter:
-                delimiter_count += 1
-                if l_ptr != 0 and not initial_done:
-                    new_nodes.append(TextNode(node.text[0:l_ptr], TextType.NORMAL))
-                    initial_done = True
-                    next_seg_inside = True
-
                 r_ptr = l_ptr+1
 
                 while r_ptr < len(node.text) and node.text[r_ptr:r_ptr+len(delimiter)] != delimiter:
                     r_ptr += 1
 
                 if r_ptr >= len(node.text):
-                    raise ValueError("Invalid markdown: unmatched delimiters")
+                    # No matching delimiter found, treat current position as normal text
+                    l_ptr += 1
+                    continue
+
+                # Found matching delimiter, process the text
+                if l_ptr != 0 and not initial_done:
+                    new_nodes.append(TextNode(node.text[0:l_ptr], TextType.NORMAL))
+                    initial_done = True
+                    next_seg_inside = True
 
                 if not initial_done:
                     text_seg = node.text[l_ptr+len(delimiter):r_ptr]
                     if text_seg: new_nodes.append(TextNode(text_seg, text_type))
-                    next_seg_inside = False # this is the initial segment and is inside the delimiters
+                    next_seg_inside = False
                     initial_done = True
-
-                elif next_seg_inside is True:
+                elif next_seg_inside:
                     text_seg = node.text[l_ptr+len(delimiter):r_ptr]
                     if text_seg: new_nodes.append(TextNode(text_seg, text_type))
                     next_seg_inside = False
-
                 else:
                     text_seg = node.text[l_ptr+len(delimiter):r_ptr]
                     if text_seg: new_nodes.append(TextNode(text_seg, TextType.NORMAL))
                     next_seg_inside = True
 
-
-                #print(f"l_ptr: {l_ptr}, r_ptr: {r_ptr}")
-               #print(f"Current text segment: '{node.text[l_ptr:r_ptr]}'")
-                l_ptr = r_ptr
-                
+                l_ptr = r_ptr + len(delimiter)
             else:
                 l_ptr += 1
 
-        # This is now outside the while loop, at the same level as the while
-        if l_ptr < len(node.text) and len(node.text[l_ptr:].strip()) > 0:
-            #print(f"Adding final segment: '{node.text[l_ptr:]}'")
+        # Add any remaining text after the last delimiter
+        if l_ptr < len(node.text):
             new_nodes.append(TextNode(node.text[l_ptr:], TextType.NORMAL))
-
-    #print("Final nodes:")
-    #for i, n in enumerate(new_nodes):
-        #print(f"Node {i}: text='{n.text}', type={n.text_type}")
 
     return new_nodes
 
