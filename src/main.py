@@ -1,9 +1,8 @@
 import textnode as textnode
-
+import file_handler as file_handler
 
 def main():
-    #text = textnode.TextNode("This is a text node", textnode.TextType.NORMAL, "https://www.boot.dev")
-    #print(text)
+    file_handler.copy_static()
 
 if __name__ == "__main__": # if the file is run directly then run the main function
     main()  
