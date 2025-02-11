@@ -192,21 +192,22 @@ def markdown_to_blocks(markdown: str) -> list[str]:
                 current_block.append(line)
             continue
         
+        # Start a new block if we encounter a list item
         if line.startswith(("* ", "- ")):
-            if current_block and not current_block[0].startswith(("* ", "- ")):
+            # If we have content in current block, save it first
+            if current_block:
                 blocks.append("\n".join(current_block))
                 current_block = []
             current_block.append(line)
             continue
             
         if line:
-            if current_block and (
-                current_block[0].startswith(("* ", "- ")) or 
-                current_block[0].startswith(">")):
+            # If current line is not a list item but we were building a list, save the list
+            if current_block and current_block[0].startswith(("* ", "- ")):
                 blocks.append("\n".join(current_block))
                 current_block = []
             current_block.append(line)
-        elif current_block:
+        elif current_block:  # Empty line
             blocks.append("\n".join(current_block))
             current_block = []
     
