@@ -27,12 +27,16 @@ def textnode_to_htmlnode(textnode: TextNode) -> HTMLNode:
 #Split Nodes at Delimiters
 def split_nodes_delimiter(old_nodes: list, delimiter: str, text_type: TextType)->list[TextNode]:
     new_nodes = []
+    print(f"\nSplitting nodes with delimiter: '{delimiter}'")  # Debug
 
     for node in old_nodes:
+        print(f"Processing node: '{node.text}'")  # Debug
         if node.text_type != TextType.NORMAL:
+            print(f"Skipping non-normal node type: {node.text_type}")  # Debug
             new_nodes.append(node)
             continue
         if not delimiter in node.text:
+            print(f"No delimiter found, keeping as is")  # Debug
             new_nodes.append(node)
             continue
         
@@ -44,44 +48,56 @@ def split_nodes_delimiter(old_nodes: list, delimiter: str, text_type: TextType)-
 
         while l_ptr < len(node.text):
             if node.text[l_ptr:l_ptr+len(delimiter)] == delimiter:
+                print(f"Found opening delimiter at position {l_ptr}")  # Debug
                 r_ptr = l_ptr+1
 
                 while r_ptr < len(node.text) and node.text[r_ptr:r_ptr+len(delimiter)] != delimiter:
                     r_ptr += 1
 
                 if r_ptr >= len(node.text):
-                    # No matching delimiter found, treat current position as normal text
+                    print(f"No matching closing delimiter found")  # Debug
                     l_ptr += 1
                     continue
 
-                # Found matching delimiter, process the text
+                print(f"Found closing delimiter at position {r_ptr}")  # Debug
+
                 if l_ptr != 0 and not initial_done:
+                    print(f"Adding text before first delimiter: '{node.text[0:l_ptr]}'")  # Debug
                     new_nodes.append(TextNode(node.text[0:l_ptr], TextType.NORMAL))
                     initial_done = True
                     next_seg_inside = True
 
                 if not initial_done:
                     text_seg = node.text[l_ptr+len(delimiter):r_ptr]
-                    if text_seg: new_nodes.append(TextNode(text_seg, text_type))
+                    if text_seg: 
+                        print(f"Adding delimited text: '{text_seg}' as {text_type}")  # Debug
+                        new_nodes.append(TextNode(text_seg, text_type))
                     next_seg_inside = False
                     initial_done = True
                 elif next_seg_inside:
                     text_seg = node.text[l_ptr+len(delimiter):r_ptr]
-                    if text_seg: new_nodes.append(TextNode(text_seg, text_type))
+                    if text_seg: 
+                        print(f"Adding delimited text: '{text_seg}' as {text_type}")  # Debug
+                        new_nodes.append(TextNode(text_seg, text_type))
                     next_seg_inside = False
                 else:
                     text_seg = node.text[l_ptr+len(delimiter):r_ptr]
-                    if text_seg: new_nodes.append(TextNode(text_seg, TextType.NORMAL))
+                    if text_seg: 
+                        print(f"Adding normal text: '{text_seg}'")  # Debug
+                        new_nodes.append(TextNode(text_seg, TextType.NORMAL))
                     next_seg_inside = True
 
                 l_ptr = r_ptr + len(delimiter)
+                # Add any text after the closing delimiter if we're done with all delimiters
+                if l_ptr < len(node.text) and node.text[l_ptr:].find(delimiter) == -1:
+                    remaining_text = node.text[l_ptr:]
+                    print(f"Adding remaining text after delimiter: '{remaining_text}'")  # Debug
+                    new_nodes.append(TextNode(remaining_text, TextType.NORMAL))
+                    break
             else:
                 l_ptr += 1
 
-        # Add any remaining text after the last delimiter
-        if l_ptr < len(node.text):
-            new_nodes.append(TextNode(node.text[l_ptr:], TextType.NORMAL))
-
+    print(f"Final nodes: {[node.text for node in new_nodes]}")  # Debug
     return new_nodes
 
 #Extract Markdown Links and Images
@@ -175,9 +191,11 @@ def markdown_to_blocks(markdown: str) -> list[str]:
     
     for line in markdown.split("\n"):
         line = line.strip()
+        print(f"Processing line: '{line}'")  # Debug
         
         if line.startswith("#"):
             if current_block:
+                print(f"Creating block (heading): {current_block}")  # Debug
                 blocks.append("\n".join(current_block))
                 current_block = []
             blocks.append(line)
@@ -186,60 +204,85 @@ def markdown_to_blocks(markdown: str) -> list[str]:
         if line.startswith(">") or (current_block and current_block[0].startswith(">")):
             if not line:  # Empty line in blockquote
                 if current_block:
+                    print(f"Creating block (quote): {current_block}")  # Debug
                     blocks.append("\n".join(current_block))
                     current_block = []
             else:  # Ensure > is preserved for blockquote content
                 current_block.append(line)
             continue
         
-        # Start a new block if we encounter a list item
-        if line.startswith(("* ", "- ")):
-            # If we have content in current block, save it first
+        # Handle empty lines
+        if not line:
             if current_block:
+                print(f"Creating block (empty): {current_block}")  # Debug
+                blocks.append("\n".join(current_block))
+                current_block = []
+            continue
+            
+        # Handle list items
+        if line.startswith(("* ", "- ")):
+            # If we're not already in a list block, start a new one
+            if current_block and not current_block[0].startswith(("* ", "- ")):
+                print(f"Creating block (list start): {current_block}")  # Debug
                 blocks.append("\n".join(current_block))
                 current_block = []
             current_block.append(line)
             continue
             
-        if line:
-            # If current line is not a list item but we were building a list, save the list
-            if current_block and current_block[0].startswith(("* ", "- ")):
-                blocks.append("\n".join(current_block))
-                current_block = []
-            current_block.append(line)
-        elif current_block:  # Empty line
+        # Handle regular text
+        if current_block and current_block[0].startswith(("* ", "- ")):
+            print(f"Creating block (list end): {current_block}")  # Debug
             blocks.append("\n".join(current_block))
             current_block = []
+        current_block.append(line)
     
     if current_block:
+        print(f"Creating final block: {current_block}")  # Debug
         blocks.append("\n".join(current_block))
     
+    print("\nFinal blocks:")  # Debug
+    for i, block in enumerate(blocks):
+        print(f"Block {i}: '{block}'")  # Debug
     return blocks
 
 #Block Handlers: Block type detection
 def detect_block_type(block: str) -> str:
+    print(f"\nDetecting block type for: '{block}'")  # Debug
+    result = "pblock"  # Default
+    
     if block.startswith(("# ", "## ", "### ", "#### ", "##### ", "###### ")):
-        return "hblock"
-    if block.startswith("```"):
+        result = "hblock"
+    elif block.startswith("```"):
         if block.endswith("```"):
-            return "codeblock"
-    if block.startswith(("* ", "- ")):
+            result = "codeblock"
+    elif block.startswith(("* ", "- ")):
         for blockline in block.split("\n"):
-            if not blockline.startswith(("* ", "- ")):
-                return "pblock"
-        return "ulblock"
-    if block.startswith("1. "):
+            if blockline and not blockline.startswith(("* ", "- ")):
+                result = "pblock"
+                break
+            # Ensure there's content after the list marker
+            if blockline.startswith(("* ", "- ")) and len(blockline.lstrip("* -").strip()) == 0:
+                result = "pblock"
+                break
+        else:
+            result = "ulblock"
+    elif block.startswith("1. "):
         item_count = 0
         for blockline in block.split("\n"):
             linelist = blockline.split(".")
             if linelist[0].isdigit():
-                if linelist[0] == str(item_count+1) and linelist[1].startswith(" "): item_count += 1        
-            else: return "pblock"
-        return "olblock"
-    if block.startswith(">"):
-        # Consider it a blockquote if the first line starts with >
-        return "qblock"
-    return "pblock"
+                if linelist[0] == str(item_count+1) and linelist[1].startswith(" "): 
+                    item_count += 1        
+            else: 
+                result = "pblock"
+                break
+        else:
+            result = "olblock"
+    elif block.startswith(">"):
+        result = "qblock"
+    
+    print(f"Detected type: {result}")  # Debug
+    return result
 
 #Block Handlers: Block to HTML
 def markdown_to_html(markdown: str) -> str:

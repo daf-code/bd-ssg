@@ -16,6 +16,7 @@ def markdown_to_html_node(markdown: str) -> HTMLNode:
     for block in blocks:
         # Determine the type of block (header, paragraph, list, etc)
         block_type = detect_block_type(block)
+        print(f"\nProcessing block to HTML: '{block}'")  # Debug
         match block_type:
             case "hblock":
                 # Count leading #s to determine header level (h1-h6)
@@ -40,24 +41,24 @@ def markdown_to_html_node(markdown: str) -> HTMLNode:
                 block_nodes.append(paragraph)
                 
             case "ulblock":
-                # Split block into individual list items by newline
+                print(f"Creating ul_node for block")  # Debug
                 items = block.split("\n")
-                # Initialize list to store processed list item nodes
                 list_items = []
                 for item in items:
-                    # Remove leading * or - and whitespace
-                    item_text = item.lstrip("* -").strip()
-                    # Parse item text for inline elements
-                    text_nodes = text_to_textnodes(item_text)
-                    # Convert text nodes to HTML nodes
-                    html_nodes = [textnode_to_htmlnode(node) for node in text_nodes]
-                    # Create li node containing the processed inline elements
-                    li_node = ParentNode("li", html_nodes)
-                    # Add to list of items
-                    list_items.append(li_node)
-                # Create ul node containing all list items
+                    # Only strip the list marker characters, not asterisks
+                    if item.startswith('- '):
+                        item_text = item[2:].strip()
+                    elif item.startswith('* '):
+                        item_text = item[2:].strip()
+                    else:
+                        item_text = item.strip()
+                    print(f"  Processing list item: '{item_text}'")  # Debug
+                    if item_text:
+                        text_nodes = text_to_textnodes(item_text)
+                        html_nodes = [textnode_to_htmlnode(node) for node in text_nodes]
+                        li_node = ParentNode("li", html_nodes)
+                        list_items.append(li_node)
                 ul_node = ParentNode("ul", list_items)
-                # Add the complete unordered list to our blocks
                 block_nodes.append(ul_node)
                 
             case "olblock":
