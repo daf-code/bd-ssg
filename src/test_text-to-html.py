@@ -42,7 +42,3 @@ class TestTextNode(unittest.TestCase):
         tnode = TextNode("This is a INVALID text node", TextType.INVALID)
         with self.assertRaises(ValueError):
             textnode_to_htmlnode(tnode)
-
-        
-        
-        

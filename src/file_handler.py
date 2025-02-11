@@ -1,7 +1,5 @@
-import glob
 import subprocess
 import os
-import time
 import shutil
 
 
@@ -9,7 +7,6 @@ def copy_static():
     directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Go up one level from src
     static_dir = os.path.join(directory, 'static')
     public_dir = os.path.join(directory, 'public')
-    timestamp = int(time.time())
     temp_zip = 'temp.zip'  # Just the filename, since we're changing directory
     
     try:
@@ -21,22 +18,29 @@ def copy_static():
         shutil.rmtree(public_dir, ignore_errors=True)
         os.makedirs(public_dir)
         
-        # Change to project root directory for zip/unzip operations
+        # Change to static directory for zip operation
         original_dir = os.getcwd()
+        os.chdir(static_dir)
+        
+        # Zip from within static directory
+        subprocess.run(['zip', '-r', '-v', os.path.join('..', temp_zip), '.'], check=True)
+    
+        # Change to project root for unzip
         os.chdir(directory)
+        subprocess.run(['unzip', '-o', temp_zip, '-d', 'public'], check=True)
         
-        # Zip and unzip commands
-        subprocess.run(['zip', '-r', '-v', temp_zip, 'static'], check=True)
-        subprocess.run(['unzip', '-j', '-o', temp_zip, 'static/*', '-d', 'public'], check=True)
         
-        # Get directory listings and split into lines, filter out directory paths
-        static_ls = set(line for line in subprocess.check_output(['ls', '-R', static_dir]).decode('utf-8').splitlines() 
-                       if not line.endswith(':') and line.strip())
-        public_ls = set(line for line in subprocess.check_output(['ls', '-R', public_dir]).decode('utf-8').splitlines()
-                       if not line.endswith(':') and line.strip())
-        
+        # Replace the ls commands with find
+        static_files = set(subprocess.check_output(
+            ['find', static_dir, '-type', 'f', '-printf', '%f\n']
+        ).decode('utf-8').splitlines())
+
+        public_files = set(subprocess.check_output(
+            ['find', public_dir, '-type', 'f', '-printf', '%f\n']
+        ).decode('utf-8').splitlines())
+
         # Check if each static file exists in public
-        missing_files = static_ls - public_ls
+        missing_files = static_files - public_files
         if missing_files:
             raise Exception(f"Verification failed: Missing files in public: {missing_files}")
         else:
