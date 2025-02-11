@@ -14,9 +14,9 @@ def textnode_to_htmlnode(textnode: TextNode) -> HTMLNode:
         case TextType.IMAGE:
             return LeafNode("img", "", {"src": textnode.url, "alt": textnode.text or "Image"})
         case TextType.BOLD:
-            return LeafNode("strong", textnode.text)
+            return LeafNode("b", textnode.text)
         case TextType.ITALIC:
-            return LeafNode("em", textnode.text)
+            return LeafNode("i", textnode.text)
         case TextType.CODE:
             return LeafNode("code", textnode.text)
         case TextType.NORMAL:

@@ -14,8 +14,7 @@ def copy_static():
         if not os.path.exists(static_dir):
             raise Exception(f"Static directory not found: {static_dir}")
         
-        # Remove and recreate public directory
-        shutil.rmtree(public_dir, ignore_errors=True)
+        #recreate public directory
         os.makedirs(public_dir)
         
         # Change to static directory for zip operation
