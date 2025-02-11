@@ -18,7 +18,9 @@ def copy_static():
         timestamp = int(time.time())
         temp_zip = os.path.join(directory, f'temp_{timestamp}.zip')
         
-        subprocess.run(['zip', '-r', '-v', temp_zip, static_dir], check=True)
+        # Change to the directory containing static before zipping
+        os.chdir(directory)
+        subprocess.run(['zip', '-r', '-v', temp_zip, 'static'], check=True)
         subprocess.run(['unzip', '-o', '-v', temp_zip, '-d', public_dir], check=True)
         
         # Get directory listings and split into lines
