@@ -303,30 +303,40 @@ def process_nested_list(items: list[str]) -> str:
     return "\n".join(result)
 
 def process_blockquote(block: str) -> str:
-    # First, split into paragraphs by empty lines
     raw_paragraphs = []
     current = []
     
     for line in block.split("\n"):
         line = line.lstrip(">").strip()  # Remove > and whitespace
+        
+        # If we have content and this line starts a list but previous content wasn't a list
+        if line and line.startswith(("- ", "* ")) and current and not current[0].startswith(("- ", "* ")):
+            raw_paragraphs.append("\n".join(current))
+            current = []
+        
+        # If we have content and this line doesn't start a list but previous content was a list
+        if line and not line.startswith(("- ", "* ")) and current and current[0].startswith(("- ", "* ")):
+            raw_paragraphs.append("\n".join(current))
+            current = []
+        
         if line:  # If line has content
             current.append(line)
         elif current:  # If empty line and we have content
             raw_paragraphs.append("\n".join(current))
             current = []
-
+    
     if current:
         raw_paragraphs.append("\n".join(current))
     
     # Process each paragraph
     html_blocks = []
     for para in raw_paragraphs:
-        # Check if this paragraph is a list
-        if any(line.strip().startswith(("- ", "* ")) for line in para.split("\n")):
-            items = [line.strip().lstrip("- *").strip() for line in para.split("\n")]
+        lines = para.split("\n")
+        if lines[0].startswith(("- ", "* ")):  # List paragraph
             list_items = []
-            for item in items:
-                nodes = text_to_textnodes(item)
+            for item in lines:
+                item_text = item.lstrip("- *").strip()
+                nodes = text_to_textnodes(item_text)
                 content = "".join(textnode_to_htmlnode(node).to_html() for node in nodes)
                 list_items.append(f"<li>{content}</li>")
             html_blocks.append("<ul>\n" + "\n".join(list_items) + "\n</ul>")
